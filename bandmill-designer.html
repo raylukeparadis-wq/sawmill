@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bandmill Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e6e9ea; --panel:#f5f6f6; --ink:#1f2a30; --muted:#5a676e; --line:#c3cacd;
+  --steel:#6e7b82; --steel2:#9aa6ab; --hi:#e3a90b; --hi-ink:#1f2a30; --wood:#b07a4a; --wood2:#d9a875;
+  --blade:#c0362c; --warn-bg:#fbefd0; --warn-ink:#6b4b00; --ground:#8d8a7e;
+  color-scheme:light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#181e21; --panel:#222a2e; --ink:#e4e9eb; --muted:#9aa6ab; --line:#38444a;
+  --steel:#8b989e; --steel2:#5b676d; --hi:#f0b81c; --hi-ink:#181e21; --wood:#9c6a3f; --wood2:#c4915e;
+  --blade:#ff6b5e; --warn-bg:#3d3216; --warn-ink:#f4d58a; --ground:#6d6a60; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#181e21; --panel:#222a2e; --ink:#e4e9eb; --muted:#9aa6ab; --line:#38444a;
+  --steel:#8b989e; --steel2:#5b676d; --hi:#f0b81c; --hi-ink:#181e21; --wood:#9c6a3f; --wood2:#c4915e;
+  --blade:#ff6b5e; --warn-bg:#3d3216; --warn-ink:#f4d58a; --ground:#6d6a60; color-scheme:dark;}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;line-height:1.1;margin:0}
+header{padding:20px 18px 6px;max-width:1280px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
+header h1{font-size:2.4rem;letter-spacing:.01em}
+header h1 span{display:inline-block;background:var(--hi);color:var(--hi-ink);padding:0 .25em;transform:skewX(-8deg)}
+header p{margin:4px 0 0;color:var(--muted);max-width:56ch}
+.toggles{display:flex;gap:6px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--panel);color:var(--ink);font:inherit;font-size:.85rem;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding:12px 18px 40px;display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.wrap{grid-template-columns:340px minmax(0,1fr)}.controls{grid-row:1/3}}
+.controls,.view,.specs{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.controls h2,.specs h2{font-size:1.35rem;margin:14px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--hi)}
+.controls h2:first-child,.specs h2:first-child{margin-top:0}
+.field{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:8px;margin:6px 0}
+.field label{font-size:.9rem}
+.field .in{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.field input,.field select{width:100%;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;padding:6px 8px;text-align:right}
+.field select{text-align:left;grid-column:1/-1}
+.field .u{padding-right:8px;color:var(--muted);font-size:.8rem}
+.full{grid-template-columns:1fr}
+.full .in{width:100%}
+.reset{margin-top:14px;border:1px solid var(--line);background:transparent;color:var(--muted);font:inherit;font-size:.85rem;padding:6px 12px;border-radius:6px;cursor:pointer}
+.views{display:grid;gap:18px}
+.view h3{font-size:1.2rem;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.view h3 small{font-family:"IBM Plex Sans",sans-serif;font-weight:400;font-size:.8rem;color:var(--muted)}
+.view svg{width:100%;height:auto;display:block;max-height:62vh}
+.slider{display:flex;gap:10px;align-items:center;font-size:.85rem;color:var(--muted);margin-top:8px}
+.slider input{flex:1;accent-color:var(--hi)}
+.big{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:6px}
+.big div{border-left:4px solid var(--hi);padding:2px 0 2px 10px}
+.big b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:1.7rem;line-height:1.1}
+.big span{font-size:.82rem;color:var(--muted)}
+dl{display:grid;grid-template-columns:1fr auto;gap:4px 14px;margin:0;font-size:.92rem}
+dt{color:var(--muted)} dd{margin:0;text-align:right}
+.tablebox{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:520px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{font-weight:600;color:var(--muted)} td.n{text-align:right}
+tfoot td{font-weight:600;border-bottom:0}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:6px;padding:8px 12px;margin:6px 0;font-size:.9rem}
+.note{color:var(--muted);font-size:.82rem;margin-top:10px}
+.specs{grid-column:1/-1}
+@media (min-width:900px){.specs{grid-column:2}}
+.s-ground{stroke:var(--ground);stroke-width:2}
+.s-steel{fill:var(--steel);stroke:var(--ink);stroke-width:1}
+.s-steel2{fill:var(--steel2);stroke:var(--ink);stroke-width:1}
+.s-wood{fill:var(--wood);stroke:var(--ink);stroke-width:1}
+.s-wood2{fill:var(--wood2);stroke:var(--ink);stroke-width:1;stroke-dasharray:6 4}
+.s-wheel{fill:none;stroke:var(--ink);stroke-width:2}
+.s-housing{fill:var(--hi);fill-opacity:.25;stroke:var(--hi);stroke-width:2}
+.s-blade{stroke:var(--blade);stroke-width:3;fill:none}
+.s-dim{stroke:var(--muted);stroke-width:1;fill:none}
+.s-txt{fill:var(--ink);font-family:"IBM Plex Sans",sans-serif}
+.s-cut{stroke:var(--blade);stroke-width:1.5;stroke-dasharray:8 5}
+svg *{vector-effect:non-scaling-stroke}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span>Bandmill</span> designer</h1>
+    <p>Size a horizontal bandsaw head, gantry and track from the logs you plan to cut. Every dimension and the steel cut list update as you type.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="controls" id="controls" aria-label="Design inputs"></section>
+  <section class="views">
+    <div class="view">
+      <h3>Front view <small>looking down the track</small></h3>
+      <svg id="front" role="img" aria-label="Front view of the gantry, saw head and log"></svg>
+      <label class="slider">Saw height <input type="range" id="cut" min="0" max="1" step="0.01"> <output id="cutOut"></output></label>
+    </div>
+    <div class="view">
+      <h3>Side view <small>gantry travel along the track</small></h3>
+      <svg id="side" role="img" aria-label="Side view of the track, log and gantry"></svg>
+      <label class="slider">Gantry position <input type="range" id="pos" min="0" max="1" step="0.01"></label>
+    </div>
+  </section>
+  <section class="specs" id="specs" aria-label="Calculated design"></section>
+</div>
+
+<script>
+const FIELDS=[
+  {g:'Log capacity'},
+  {id:'logDia',label:'Largest log diameter',k:'len',d:762},
+  {id:'logLen',label:'Longest log',k:'ft',d:4876.8},
+  {g:'Saw head'},
+  {id:'wheelDia',label:'Band wheel diameter',k:'len',d:660.4},
+  {id:'wheelRpm',label:'Wheel speed',k:'rpm',d:800},
+  {id:'bladeW',label:'Blade width',k:'len',d:38.1},
+  {id:'bladeT',label:'Blade thickness',k:'thin',d:1.397},
+  {id:'guideClr',label:'Guide clearance past log',k:'len',d:50.8},
+  {g:'Track and gantry'},
+  {id:'bedH',label:'Bunk height above ground',k:'len',d:457.2},
+  {id:'gantryD',label:'Gantry depth along track',k:'len',d:711.2},
+  {id:'tieSp',label:'Crosstie spacing',k:'len',d:609.6},
+  {id:'bunkSp',label:'Log bunk spacing',k:'len',d:1219.2},
+  {sel:'rail',label:'Rail section'},
+  {sel:'frame',label:'Frame section'},
+  {g:'Lumber'},
+  {id:'boardT',label:'Board thickness',k:'len',d:25.4},
+  {id:'kerf',label:'Kerf',k:'thin',d:2.032}
+];
+const SECTIONS={
+  rail:[['Rect tube 4×2×3/16 on edge',10.58],['Angle 3×3×1/4, point up',7.29],['Channel C4×5.4',8.04],['Square tube 2×2×1/4',7.62]],
+  frame:[['Square tube 3×3×3/16',10.22],['Square tube 2×2×1/8',4.54],['Rect tube 4×2×1/8',7.29],['Square tube 4×4×1/4',18.17]]
+};
+const DEF={units:'in',rail:0,frame:0,cut:0.55,pos:0.35,v:{}};
+FIELDS.forEach(f=>{if(f.id)DEF.v[f.id]=f.d});
+const KEY='bandmill-designer-us-v2';
+let S=load();
+
+function load(){
+  try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.v)return{...DEF,...r,v:{...DEF.v,...r.v}}}catch(e){}
+  return structuredClone(DEF);
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+const imp=()=>S.units==='in';
+function toDisp(f,mm){
+  if(f.k==='rpm')return mm;
+  if(f.k==='ft'&&imp())return +(mm/304.8).toFixed(2);
+  if(!imp())return f.k==='thin'?+mm.toFixed(2):Math.round(mm);
+  const i=mm/25.4;return f.k==='thin'?+i.toFixed(3):+i.toFixed(2);
+}
+function fromDisp(f,x){return f.k==='rpm'||!imp()?x:f.k==='ft'?x*304.8:x*25.4}
+function unit(f){return f.k==='rpm'?'rpm':imp()?(f.k==='ft'?'ft':'in'):'mm'}
+function L(mm){
+  if(!imp())return Math.round(mm).toLocaleString()+' mm';
+  const t=mm/25.4;if(t<12)return t.toFixed(2)+'″';
+  const ft=Math.floor(t/12);return ft+'′ '+(t-ft*12).toFixed(1)+'″';
+}
+const M=mm=>imp()?(mm/304.8).toFixed(1)+' ft':(mm/1000).toFixed(2)+' m';
+const KG=kg=>imp()?Math.round(kg*2.2046).toLocaleString()+' lb':Math.round(kg).toLocaleString()+' kg';
+
+function buildControls(){
+  const c=document.getElementById('controls');c.innerHTML='';
+  FIELDS.forEach(f=>{
+    if(f.g){const h=document.createElement('h2');h.textContent=f.g;c.appendChild(h);return}
+    const row=document.createElement('div');
+    if(f.sel){
+      row.className='field full';
+      const id='sel-'+f.sel;
+      row.innerHTML=`<label for="${id}">${f.label}</label><div class="in"><select id="${id}">${
+        SECTIONS[f.sel].map((s,i)=>`<option value="${i}">${s[0]} (${imp()?(s[1]*0.672).toFixed(2)+' lb/ft':s[1]+' kg/m'})</option>`).join('')}</select></div>`;
+      const s=row.querySelector('select');s.value=S[f.sel];
+      s.onchange=()=>{S[f.sel]=+s.value;update()};
+    }else{
+      row.className='field';
+      row.innerHTML=`<label for="f-${f.id}">${f.label}</label><div class="in"><input id="f-${f.id}" type="number" inputmode="decimal" step="any" min="0" value="${toDisp(f,S.v[f.id])}"><span class="u">${unit(f)}</span></div>`;
+      const inp=row.querySelector('input');
+      inp.oninput=()=>{const x=parseFloat(inp.value);if(isFinite(x)&&x>0){S.v[f.id]=fromDisp(f,x);update()}};
+    }
+    c.appendChild(row);
+  });
+  const b=document.createElement('button');b.className='reset';b.textContent='Reset to defaults';
+  b.onclick=()=>{const u=S.units;S=structuredClone(DEF);S.units=u;buildControls();syncSliders();update()};
+  c.appendChild(b);
+  document.querySelectorAll('[data-units]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.units===S.units));
+}
+
+function calc(v){
+  const throat=v.logDia+2*v.guideClr;
+  const C=throat+v.wheelDia+120;                // wheel centre distance; 60 mm guide block each side
+  const bladeLen=2*C+Math.PI*v.wheelDia;
+  const headW=C+v.wheelDia+80;                   // housing 40 mm each side
+  const gauge=headW+200;                         // 100 mm leg clearance each side
+  const speed=Math.PI*v.wheelDia/1000*v.wheelRpm/60;
+  const maxCut=v.logDia+25;
+  const mastH=maxCut+v.wheelDia+40+150;          // above bunk; 150 mm for lift screw/carriage
+  const travel=maxCut-v.boardT;
+  const trackLen=v.logLen+2*v.gantryD+600;
+  const ties=Math.floor(trackLen/v.tieSp)+1;
+  const posts=Math.ceil(ties/2)*2;
+  const bunks=Math.ceil(v.logLen/v.bunkSp)+1;
+  const cant=v.logDia/Math.SQRT2;
+  const boards=Math.max(0,Math.floor(cant/(v.boardT+v.kerf)));
+  const kerfPct=v.kerf/(v.boardT+v.kerf)*100;
+  const ratio=v.wheelDia/v.bladeT;
+  return{throat,C,bladeLen,headW,gauge,speed,maxCut,mastH,travel,trackLen,ties,posts,bunks,cant,boards,kerfPct,ratio};
+}
+
+function parts(v,r){
+  return[
+    ['Track rails','rail',2,r.trackLen],
+    ['Crossties','frame',r.ties,r.gauge+150],
+    ['Track legs','frame',r.posts,v.bedH],
+    ['Log bunks','frame',r.bunks,r.gauge-200],
+    ['Gantry masts','frame',4,r.mastH],
+    ['Gantry top beams','frame',2,r.gauge+75],
+    ['Gantry side beams','frame',2,v.gantryD],
+    ['Saw head carriage rails','frame',2,r.headW],
+    ['Wheel mounting arms','frame',2,v.wheelDia/2+150]
+  ];
+}
+
+function warnings(v,r){
+  const w=[];
+  if(r.speed<22||r.speed>35)w.push(`Blade speed is ${Math.round(r.speed*196.85).toLocaleString()} ft/min. Portable bandmills usually run around 5,000–6,500 ft/min; change wheel speed or diameter.`);
+  if(r.ratio<420)w.push(`Wheel diameter is only ${Math.round(r.ratio)}× blade thickness. Below about 420× the blade tends to crack from flexing; use a thinner blade or bigger wheels.`);
+  if(v.bladeW>v.wheelDia/10)w.push('The blade is wide for these wheels. Keep blade width under about a tenth of the wheel diameter.');
+  if(r.gauge>2000)w.push(`The gantry spans ${L(r.gauge)}. At this width, stiffen the top beams and add diagonal bracing so the head doesn't rack while cutting.`);
+  if(r.boards===0)w.push('The board thickness is larger than the squared cant, so no boards fit.');
+  if(v.tieSp>800)w.push('Crossties more than about 32″ apart let light rails sag under the gantry wheels.');
+  return w;
+}
+
+const NS='http://www.w3.org/2000/svg';
+function el(tag,a,parent){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);parent.appendChild(e);return e}
+function txt(s,x,y,fs,parent,anchor='middle'){const t=el('text',{x,y,'font-size':fs,'text-anchor':anchor,class:'s-txt'},parent);t.textContent=s;return t}
+function dimH(svg,x1,x2,y,label,fs){
+  el('line',{x1,y1:y,x2,y2:y,class:'s-dim'},svg);
+  [x1,x2].forEach(x=>el('line',{x1:x,y1:y-fs*.5,x2:x,y2:y+fs*.5,class:'s-dim'},svg));
+  const t=txt(label,(x1+x2)/2,y-fs*.35,fs,svg);
+}
+
+function drawFront(v,r){
+  const svg=document.getElementById('front');svg.innerHTML='';
+  const W=r.gauge+700, H=v.bedH+r.mastH+460, fs=W/34;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const X=x=>x+W/2, Y=y=>H-200-y;
+  const cut=v.boardT+(r.maxCut-v.boardT)*S.cut;
+  el('line',{x1:0,y1:Y(0),x2:W,y2:Y(0),class:'s-ground'},svg);
+  // track frame
+  el('rect',{x:X(-r.gauge/2-75),y:Y(v.bedH-75),width:r.gauge+150,height:75,class:'s-steel2'},svg);
+  [-1,1].forEach(s=>{
+    el('rect',{x:X(s*(r.gauge/2)-37),y:Y(v.bedH-75),width:75,height:v.bedH-75,class:'s-steel2'},svg);
+    el('rect',{x:X(s*r.gauge/2-25),y:Y(v.bedH+50),width:50,height:50,class:'s-steel'},svg);
+  });
+  el('rect',{x:X(-r.gauge/2+100),y:Y(v.bedH),width:r.gauge-200,height:1,class:'s-steel'},svg);
+  // log: lower part solid, upper part (above cut) dashed = already sawn off
+  const R=v.logDia/2, cy=v.bedH+R;
+  el('circle',{cx:X(0),cy:Y(cy),r:R,class:'s-wood2'},svg);
+  const clip=el('clipPath',{id:'below'},el('defs',{},svg));
+  el('rect',{x:0,y:Y(v.bedH+cut),width:W,height:H},clip);
+  el('circle',{cx:X(0),cy:Y(cy),r:R,class:'s-wood','clip-path':'url(#below)'},svg);
+  for(let k=1;k<5;k++)el('circle',{cx:X(0),cy:Y(cy),r:R*k/5,class:'s-dim','clip-path':'url(#below)'},svg);
+  // gantry
+  const gTop=v.bedH+r.mastH;
+  [-1,1].forEach(s=>el('rect',{x:X(s*r.gauge/2-37),y:Y(gTop),width:75,height:r.mastH,class:'s-steel'},svg));
+  el('rect',{x:X(-r.gauge/2-37),y:Y(gTop+75),width:r.gauge+75,height:75,class:'s-steel'},svg);
+  [-1,1].forEach(s=>el('circle',{cx:X(s*r.gauge/2),cy:Y(v.bedH+65),r:30,class:'s-steel2'},svg));
+  // saw head
+  const wy=v.bedH+cut+v.wheelDia/2;
+  el('rect',{x:X(-r.headW/2),y:Y(wy+v.wheelDia/2+40),width:r.headW,height:v.wheelDia+80,rx:30,class:'s-housing'},svg);
+  [-1,1].forEach(s=>{
+    el('circle',{cx:X(s*r.C/2),cy:Y(wy),r:v.wheelDia/2,class:'s-wheel'},svg);
+    el('circle',{cx:X(s*r.C/2),cy:Y(wy),r:20,class:'s-steel'},svg);
+    el('rect',{x:X(s*(r.throat/2+30)-30),y:Y(v.bedH+cut)-20,width:60,height:40,class:'s-steel'},svg);
+    el('line',{x1:X(s*(r.gauge/2-37)),y1:Y(wy),x2:X(s*(r.headW/2)),y2:Y(wy),class:'s-steel',style:'stroke:var(--steel);stroke-width:6'},svg);
+  });
+  el('path',{d:`M${X(-r.C/2)} ${Y(v.bedH+cut)}H${X(r.C/2)}M${X(-r.C/2)} ${Y(wy+v.wheelDia/2)}H${X(r.C/2)}`,class:'s-blade'},svg);
+  el('line',{x1:X(-r.gauge/2),y1:Y(v.bedH+cut),x2:X(r.gauge/2),y2:Y(v.bedH+cut),class:'s-cut'},svg);
+  // dimensions
+  dimH(svg,X(-r.gauge/2),X(r.gauge/2),Y(0)+fs*2.2,'Rail gauge '+L(r.gauge),fs);
+  dimH(svg,X(-r.throat/2),X(r.throat/2),Y(gTop+75)-fs*1.2,'Throat '+L(r.throat),fs);
+  txt(L(cut)+' above bunk',X(r.gauge/2+60),Y(v.bedH+cut)-fs*.3,fs*.85,svg,'start');
+  document.getElementById('cutOut').textContent=L(cut);
+}
+
+function drawSide(v,r){
+  const svg=document.getElementById('side');svg.innerHTML='';
+  const W=r.trackLen+600, H=v.bedH+r.mastH+360, fs=W/48;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const X=x=>x+300, Y=y=>H-180-y;
+  el('line',{x1:0,y1:Y(0),x2:W,y2:Y(0),class:'s-ground'},svg);
+  el('rect',{x:X(0),y:Y(v.bedH),width:r.trackLen,height:60,class:'s-steel'},svg);
+  for(let i=0;i<r.ties;i++){
+    const x=Math.min(i*v.tieSp,r.trackLen-75);
+    if(i%2===0)el('rect',{x:X(x),y:Y(v.bedH-60),width:75,height:v.bedH-60,class:'s-steel2'},svg);
+  }
+  const lx=v.gantryD+300;
+  for(let i=0;i<r.bunks;i++){const x=lx+Math.min(i*v.bunkSp,v.logLen-75);el('rect',{x:X(x),y:Y(v.bedH+40),width:75,height:40,class:'s-steel2'},svg)}
+  el('rect',{x:X(lx),y:Y(v.bedH+40+v.logDia),width:v.logLen,height:v.logDia,rx:v.logDia*.15,class:'s-wood'},svg);
+  const gx=S.pos*(r.trackLen-v.gantryD);
+  const cut=v.bedH+40+v.boardT+(r.maxCut-v.boardT)*S.cut;
+  const gTop=v.bedH+r.mastH;
+  [0,v.gantryD-75].forEach(o=>el('rect',{x:X(gx+o),y:Y(gTop),width:75,height:r.mastH,class:'s-steel'},svg));
+  el('rect',{x:X(gx),y:Y(gTop+75),width:v.gantryD,height:75,class:'s-steel'},svg);
+  el('rect',{x:X(gx+v.gantryD/2-180),y:Y(cut+v.wheelDia+40),width:360,height:v.wheelDia+80,rx:30,class:'s-housing'},svg);
+  el('line',{x1:X(gx+v.gantryD/2-v.bladeW*2),y1:Y(cut),x2:X(gx+v.gantryD/2+v.bladeW*2),y2:Y(cut),class:'s-blade'},svg);
+  el('line',{x1:X(0),y1:Y(cut),x2:X(r.trackLen),y2:Y(cut),class:'s-cut'},svg);
+  dimH(svg,X(0),X(r.trackLen),Y(0)+fs*2.2,'Track length '+L(r.trackLen),fs);
+  dimH(svg,X(lx),X(lx+v.logLen),Y(v.bedH+40+v.logDia)-fs*1.1,'Log '+L(v.logLen),fs);
+}
+
+function renderSpecs(v,r){
+  const sec=S.units==='in';
+  const list=parts(v,r);
+  let total=0;
+  const rows=list.map(([n,k,q,len])=>{
+    const s=SECTIONS[k][S[k]], m=q*len/1000, kg=m*s[1];total+=kg;
+    return`<tr><td>${n}</td><td>${s[0]}</td><td class="n">${q}</td><td class="n">${L(len)}</td><td class="n">${M(q*len)}</td><td class="n">${KG(kg)}</td></tr>`;
+  }).join('');
+  const w=warnings(v,r);
+  const vol=r.boards*r.cant*v.boardT*v.logLen/1e9;
+  document.getElementById('specs').innerHTML=`
+  <h2>Key numbers</h2>
+  <div class="big">
+    <div><b>${L(r.bladeLen)}</b><span>blade length</span></div>
+    <div><b>${L(r.trackLen)}</b><span>track length</span></div>
+    <div><b>${L(r.gauge)}</b><span>rail gauge</span></div>
+    <div><b>${(r.speed*(sec?196.85:1)).toFixed(sec?0:1)} ${sec?'ft/min':'m/s'}</b><span>blade speed</span></div>
+  </div>
+  ${w.map(x=>`<div class="warn">${x}</div>`).join('')}
+  <h2>Saw head</h2>
+  <dl>
+    <dt>Usable throat between guides</dt><dd>${L(r.throat)}</dd>
+    <dt>Wheel centre distance</dt><dd>${L(r.C)}</dd>
+    <dt>Head housing width</dt><dd>${L(r.headW)}</dd>
+    <dt>Highest cut above bunks</dt><dd>${L(r.maxCut)}</dd>
+    <dt>Vertical lift travel</dt><dd>${L(r.travel)}</dd>
+    <dt>Wheel to blade thickness ratio</dt><dd>${Math.round(r.ratio)} : 1</dd>
+  </dl>
+  <h2>Gantry and track</h2>
+  <dl>
+    <dt>Mast height above bunks</dt><dd>${L(r.mastH)}</dd>
+    <dt>Overall gantry height from ground</dt><dd>${L(r.mastH+v.bedH+75)}</dd>
+    <dt>Gantry overall width</dt><dd>${L(r.gauge+75)}</dd>
+    <dt>Crossties</dt><dd>${r.ties}</dd>
+    <dt>Log bunks</dt><dd>${r.bunks}</dd>
+  </dl>
+  <h2>Yield from the largest log</h2>
+  <dl>
+    <dt>Squared cant</dt><dd>${L(r.cant)} × ${L(r.cant)}</dd>
+    <dt>Boards per cant</dt><dd>${r.boards} wide boards</dd>
+    <dt>Lumber volume</dt><dd>${sec?Math.round(vol*423.8)+' board ft':vol.toFixed(2)+' m³'}</dd>
+    <dt>Lost to kerf</dt><dd>${r.kerfPct.toFixed(1)}%</dd>
+  </dl>
+  <h2>Steel cut list</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>Part</th><th>Section</th><th class="n">Qty</th><th class="n">Each</th><th class="n">Total</th><th class="n">Weight</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="5">Total steel, before offcuts</td><td class="n">${KG(total)}</td></tr></tfoot>
+  </table></div>
+  <p class="note">Lengths are cut sizes before mitres and joint allowances. Blade length assumes equal wheels with the band on the rim; add twice the tyre thickness if your wheels have rubber tyres. These are workshop rules of thumb for layout, not a structural design, so check beam sizes and welds before cutting.</p>`;
+}
+
+function update(){
+  const r=calc(S.v);
+  drawFront(S.v,r);drawSide(S.v,r);renderSpecs(S.v,r);save();
+}
+function syncSliders(){document.getElementById('cut').value=S.cut;document.getElementById('pos').value=S.pos}
+
+document.querySelectorAll('[data-units]').forEach(b=>b.onclick=()=>{S.units=b.dataset.units;buildControls();update()});
+document.getElementById('cut').oninput=e=>{S.cut=+e.target.value;update()};
+document.getElementById('pos').oninput=e=>{S.pos=+e.target.value;update()};
+buildControls();syncSliders();update();
+</script>
+</body>
+</html>
