@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d2327">
+<title>Sawmill feed remote</title>
+<style>
+:root{--bg:#1d2327;--panel:#2a3237;--ink:#eef2f3;--muted:#9aa6ab;--go:#2e9d5b;--back:#3a78c2;--stop:#d23b2f;--hi:#f0b81c;--line:#3a464c}
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0 auto;max-width:520px;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding:14px}
+h1{font-size:1.3rem;margin:0}
+header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+header a{color:var(--muted);font-size:.85rem}
+.card{background:var(--panel);border-radius:10px;padding:12px;margin-bottom:12px}
+.big{font-size:2.6rem;font-weight:700;line-height:1}
+.muted{color:var(--muted);font-size:.85rem}
+.row{display:flex;gap:10px}.row>*{flex:1}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;color:#fff;padding:18px 8px;font-size:1.15rem;touch-action:manipulation;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+.fwd{background:var(--go)}.rev{background:var(--back)}.step{background:#46535a}.link{background:#46535a}
+.stop{background:var(--stop);font-size:1.6rem;padding:24px;width:100%}
+.warn{color:var(--hi);font-weight:600;min-height:1.4em}
+input[type=range]{width:100%;accent-color:var(--hi)}
+input[type=password]{font:inherit;font-size:1.3rem;width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);letter-spacing:.3em}
+.flags span{display:inline-block;margin:2px 10px 2px 0}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#666;margin-right:6px;vertical-align:middle}
+.dot.on{background:var(--go)}
+label.chk{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:.9rem;color:var(--muted)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><h1>Sawmill feed</h1><a href="index.html">Designer</a></header>
+
+<div class="card" id="nobt" hidden>
+  <b>This browser can't use Bluetooth.</b>
+  <p class="muted">On Android, open this page in Chrome. On iPhone, Safari doesn't support it; use the free Bluefy browser.</p>
+</div>
+
+<div class="card">
+  <div class="row" style="align-items:center">
+    <div><span class="dot" id="dot"></span><span id="link">Not connected</span></div>
+    <button class="link" id="connect" style="flex:0 0 auto;padding:12px 16px;font-size:1rem">Connect</button>
+  </div>
+</div>
+
+<div class="card" id="pinbox" hidden>
+  <label for="pin" class="muted">Mill PIN</label>
+  <div class="row" style="margin-top:6px">
+    <input type="password" id="pin" inputmode="numeric" autocomplete="off" maxlength="12">
+    <button class="link" id="unlock" style="flex:0 0 auto;padding:12px 16px;font-size:1rem">Unlock</button>
+  </div>
+  <label class="chk"><input type="checkbox" id="remember"> Remember on this phone</label>
+</div>
+
+<div class="card">
+  <div class="muted">State</div>
+  <div class="big" id="state">–</div>
+  <div class="warn" id="msg"></div>
+  <div class="muted">Moving at <b id="cur">0</b> ft/min</div>
+</div>
+
+<div class="card">
+  <div class="muted">Cutting speed</div>
+  <div class="big"><span id="cut">–</span> <small>ft/min</small></div>
+  <input type="range" id="slider" min="1" max="30" step="0.5" aria-label="Cutting speed">
+  <div class="row" style="margin-top:8px">
+    <button class="step ctl" data-op="5">Slower</button>
+    <button class="step ctl" data-op="4">Faster</button>
+  </div>
+</div>
+
+<div class="row" style="margin-bottom:12px">
+  <button class="rev ctl" data-op="2">Return</button>
+  <button class="fwd ctl" data-op="1">Cut</button>
+</div>
+<button class="stop" id="stop">STOP</button>
+
+<div class="card flags" style="margin-top:12px">
+  <span>Battery: <b id="bat">–</b></span><span>Engine: <b id="rpm">–</b></span><span>Auto-slow: <b id="auto">–</b></span>
+  <span>Far end: <b id="lf">–</b></span><span>Near end: <b id="lr">–</b></span><span>Power: <b id="pw">–</b></span>
+  <div class="row" style="margin-top:8px"><button class="step ctl" data-op="7">Toggle auto-slow</button></div>
+</div>
+<p class="muted">Keep this page open and the screen on while the feed runs from the phone. If the phone goes quiet for 1.5 seconds, the feed stops. The red e-stop on the mill always cuts motor power.</p>
+
+<script>
+// Must match sawfeed/protocol.h on the Arduino.
+const SVC='5a3e0001-7b1d-4c6e-9a2f-5a77d1e1f001', CMD='5a3e0002-7b1d-4c6e-9a2f-5a77d1e1f001', STAT='5a3e0003-7b1d-4c6e-9a2f-5a77d1e1f001';
+const OP={FWD:1,REV:2,STOP:3,FASTER:4,SLOWER:5,SET:6,AUTO:7,HB:8,UNLOCK:9};
+const STATES=['stopped','forward','reverse','estop'];
+const BATT_WARN_V=12.4;   // matches BATTERY_WARN_V in config.py
+const MESSAGES=['','Ready','Cutting','Returning','Stopped','Stopped from phone','E-stop',
+ 'E-stop: release it, then press Stop to reset','E-stop still pressed','Reset. Ready',
+ 'At the far end of the track','At the operator end of the track','Reached the far end','Back at the start',
+ 'Stopped: lost contact with the phone','Locked: enter the PIN','Wrong PIN','Too many wrong PINs: wait 30 seconds','Unlocked',
+ 'Battery low','Battery low: feed stopped'];
+
+const $=id=>document.getElementById(id);
+let device=null, cmdChar=null, queue=Promise.resolve(), hbTimer=null, dragging=false, unlocked=false, wakeLock=null;
+
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+             set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+
+function send(op,payload,quiet){
+  if(!cmdChar)return Promise.resolve();
+  const bytes=new Uint8Array(1+(payload?payload.length:0));bytes[0]=op;if(payload)bytes.set(payload,1);
+  queue=queue.then(()=>quiet&&cmdChar.writeValueWithoutResponse?cmdChar.writeValueWithoutResponse(bytes):cmdChar.writeValue(bytes))
+             .catch(()=>{if(!quiet)$('msg').textContent='Command not sent'});
+  return queue;
+}
+function sendSpeed(v){const b=new Uint8Array(4);new DataView(b.buffer).setFloat32(0,v,true);send(OP.SET,b)}
+function sendPin(pin){send(OP.UNLOCK,new TextEncoder().encode(pin))}
+
+function parse(dv){
+  const s=dv.getUint8(0),f=dv.getUint8(1),m=dv.getUint8(8);
+  return{state:STATES[s]||'?',auto:!!(f&1),front:!!(f&2),rear:!!(f&4),power:!!(f&8),unlocked:!!(f&16),
+    rpm:(f&32)?dv.getUint16(6,true):null,cut:dv.getUint16(2,true)/10,cur:dv.getInt16(4,true)/10,msg:MESSAGES[m]||'',
+    batt:((f&64)&&dv.byteLength>=13)?{v:dv.getUint16(9,true)/100,a:dv.getInt16(11,true)/10}:null};
+}
+function show(s){
+  $('state').textContent=s.state;$('msg').textContent=s.msg;$('cur').textContent=Math.abs(s.cur);
+  $('cut').textContent=s.cut;if(!dragging)$('slider').value=s.cut;
+  $('rpm').textContent=s.rpm==null?'no tach':s.rpm+' rpm';$('auto').textContent=s.auto?'on':'off';
+  const b=$('bat');
+  if(s.batt){b.textContent=s.batt.v.toFixed(1)+' V, '+(s.batt.a>=0?'charging ':'using ')+Math.abs(s.batt.a).toFixed(1)+' A';
+    b.style.color=s.batt.v<BATT_WARN_V?'var(--hi)':''}else{b.textContent='no monitor';b.style.color=''}
+  $('lf').textContent=s.front?'yes':'no';$('lr').textContent=s.rear?'yes':'no';$('pw').textContent=s.power?'on':'E-STOP';
+  if(s.unlocked!==unlocked){unlocked=s.unlocked;setLocked()}
+}
+function setLocked(){
+  const live=!!cmdChar;
+  $('pinbox').hidden=!live||unlocked;
+  document.querySelectorAll('.ctl').forEach(b=>b.disabled=!live||!unlocked);
+  $('slider').disabled=!live||!unlocked;$('stop').disabled=!live;
+}
+function setLink(on,text){$('dot').classList.toggle('on',on);$('link').textContent=text;$('connect').textContent=on?'Disconnect':'Connect';setLocked()}
+
+async function connect(){
+  if(device&&device.gatt.connected){device.gatt.disconnect();return}
+  try{
+    if(!device){
+      device=await navigator.bluetooth.requestDevice({filters:[{services:[SVC]},{namePrefix:'Sawmill'}],optionalServices:[SVC]});
+      device.addEventListener('gattserverdisconnected',onDisconnect);
+    }
+    setLink(false,'Connecting…');
+    const server=await device.gatt.connect();
+    const svc=await server.getPrimaryService(SVC);
+    cmdChar=await svc.getCharacteristic(CMD);
+    const stat=await svc.getCharacteristic(STAT);
+    stat.addEventListener('characteristicvaluechanged',e=>show(parse(e.target.value)));
+    await stat.startNotifications();
+    show(parse(await stat.readValue()));
+    setLink(true,'Connected to '+(device.name||'mill'));
+    startHeartbeat();keepAwake();
+    const saved=store.get('sawmillPin');if(saved&&!unlocked)sendPin(saved);
+  }catch(e){
+    cmdChar=null;setLink(false,e.name==='NotFoundError'?'Not connected':'Could not connect');
+  }
+}
+function onDisconnect(){cmdChar=null;unlocked=false;stopHeartbeat();setLink(false,'Disconnected: feed stops by itself');$('state').textContent='–'}
+function startHeartbeat(){stopHeartbeat();hbTimer=setInterval(()=>{if(!document.hidden)send(OP.HB,null,true)},400)}
+function stopHeartbeat(){if(hbTimer)clearInterval(hbTimer);hbTimer=null}
+async function keepAwake(){try{if('wakeLock' in navigator)wakeLock=await navigator.wakeLock.request('screen')}catch(e){}}
+
+$('connect').onclick=connect;
+$('stop').onclick=()=>send(OP.STOP);
+document.querySelectorAll('.ctl[data-op]').forEach(b=>b.onclick=()=>send(+b.dataset.op));
+$('unlock').onclick=()=>{const p=$('pin').value.trim();if(!p){$('msg').textContent='Enter the PIN first';return}
+  store.set('sawmillPin',$('remember').checked?p:null);sendPin(p);$('pin').value=''};
+$('pin').addEventListener('keydown',e=>{if(e.key==='Enter')$('unlock').click()});
+const sl=$('slider');sl.oninput=()=>{dragging=true;$('cut').textContent=sl.value};sl.onchange=()=>{dragging=false;sendSpeed(parseFloat(sl.value))};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&cmdChar)keepAwake()});
+
+if(!navigator.bluetooth){$('nobt').hidden=false;$('connect').disabled=true}
+$('remember').checked=!!store.get('sawmillPin');
+setLocked();
+</script>
+</body>
+</html>
