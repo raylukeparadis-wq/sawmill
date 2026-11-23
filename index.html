@@ -184,7 +184,7 @@ const SECTIONS={
 };
 const BLADES=[144,158,167,176,184,195,196,205,221,228];
 const DEBARKERS={belt:'Belt drive off the wheel shaft',electric:'¾ HP 12 V electric motor',none:'None'};
-const FEEDS={manual:'Manual push',chain:'Optional chain drive, Raspberry Pi control'};
+const FEEDS={manual:'Manual push',chain:'Optional chain drive, Arduino control'};
 const DEF={units:'in',blade:205,debarker:'belt',feed:'manual',rail:0,frame:0,cut:0.55,pos:0.35,v:{}};
 FIELDS.forEach(f=>{if(f.id)DEF.v[f.id]=f.d});
 const KEY='bandmill-designer-us-v3';
@@ -419,7 +419,7 @@ function renderSpecs(v,r){
     <dt>Overall gantry height from ground</dt><dd>${L(r.mastH+v.bedH+75)}</dd>
     <dt>Gantry overall width</dt><dd>${L(r.gauge+75)}</dd>
     <dt>Crossties</dt><dd>${r.ties}</dd>
-    <dt>Gantry feed</dt><dd>${S.feed==='chain'?`0–47 ft/min, Pi-controlled, ${Math.ceil((r.trackLen+610)/304.8)} ft of #50 chain`:'Manual push'}</dd>
+    <dt>Gantry feed</dt><dd>${S.feed==='chain'?`0–47 ft/min, Arduino-controlled, ${Math.ceil((r.trackLen+610)/304.8)} ft of #50 chain`:'Manual push'}</dd>
     <dt>Log bunks</dt><dd>${r.bunks}</dd>
   </dl>
   <h2>Yield from the largest log</h2>

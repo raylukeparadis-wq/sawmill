@@ -87,7 +87,7 @@ label.chk{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:.9rem
 <p class="muted">Keep this page open and the screen on while the feed runs from the phone. If the phone goes quiet for 1.5 seconds, the feed stops. The red e-stop on the mill always cuts motor power.</p>
 
 <script>
-// Must match sawfeed/protocol.py on the Pi.
+// Must match sawfeed/protocol.h on the Arduino.
 const SVC='5a3e0001-7b1d-4c6e-9a2f-5a77d1e1f001', CMD='5a3e0002-7b1d-4c6e-9a2f-5a77d1e1f001', STAT='5a3e0003-7b1d-4c6e-9a2f-5a77d1e1f001';
 const OP={FWD:1,REV:2,STOP:3,FASTER:4,SLOWER:5,SET:6,AUTO:7,HB:8,UNLOCK:9};
 const STATES=['stopped','forward','reverse','estop'];

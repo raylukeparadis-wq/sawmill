@@ -79,6 +79,38 @@ const IPB_VIEWS={
       9:[[250,92]],10:[[215,124]],4:[[215,86]],11:[[215,93]]}}
 };
 
+// Debarker additions per view, shown when a debarker is selected.
+const IPB_DEB={
+  front:{draw:()=>LN(210,114,212,176,'s-steel',THICK)+C(212,186,8,'s-part')+C(212,186,2,'s-steel')+
+      (S.debarker==='belt'?LN(255,153,212,186,'s-dim','stroke-dasharray="4 2"'):R(200,150,16,12,'s-part','rx="2"')),
+    parts:[[29,220,186],[30,232,170]],welds:{13:[[210,114]]}},
+  side:{draw:()=>LN(196,104,188,120,'s-steel',THICK)+C(188,123,4,'s-part'),
+    parts:[[29,184,123]],welds:{13:[[196,104]]}},
+  top:{draw:()=>R(184,119,12,3,'s-part')+LN(196,120,206,104,'s-steel',THICK),
+    parts:[[29,186,121]],welds:{}}
+};
+
+// Chain power feed additions per view.
+const IPB_FEED={
+  front:{draw:()=>R(34,236,18,13,'s-part','rx="2"')+LN(43,249,43,262,'s-dim')+R(36,262,14,10,'s-part','rx="2"')+LN(50,267,58,267,'s-steel',THICK)+LN(43,272,52,280,'s-dim')+C(52,282,3,'s-part'),
+    parts:[[31,36,264],[32,52,284],[35,34,240]],welds:{15:[[58,267]]}},
+  side:{draw:()=>LN(47,173,228,173,'s-dim','stroke-dasharray="3 1"')+LN(252,173,328,173,'s-dim','stroke-dasharray="3 1"')+
+      `<path d="M228 173L230 174L240 181L250 174L252 173" class="s-dim" fill="none"/>`+
+      C(230,174,3,'s-part')+C(250,174,3,'s-part')+C(240,181,4,'s-part')+R(232,185,16,8,'s-part','rx="2"')+
+      LN(229,159,236,185,'s-steel',THICK)+R(41,170,5,6,'s-steel')+R(329,170,5,6,'s-steel'),
+    parts:[[31,248,189],[32,120,173],[33,43,173],[34,252,174]],welds:{14:[[43,173],[332,173]],15:[[229,160]]}},
+  top:{draw:()=>LN(46,43,329,43,'s-dim','stroke-dasharray="3 1"')+R(41,40,5,6,'s-steel')+R(329,40,5,6,'s-steel')+R(205,32,18,8,'s-part','rx="2"'),
+    parts:[[31,214,34],[32,100,43],[33,43,43]],welds:{14:[[43,46],[332,46]],15:[[214,42]]}}
+};
+
+// Added alternator, shown when the power budget needs one.
+const IPB_ALT={
+  front:{draw:()=>LN(226,95,226,108,'s-steel',THICK)+C(226,88,7,'s-part')+C(226,88,2,'s-steel')+LN(214,92,220,92,'s-dim'),
+    parts:[[36,233,88]],welds:{16:[[226,108]]}},
+  side:{draw:()=>C(252,86,5,'s-part')+LN(250,90,246,96,'s-dim'),parts:[[36,257,86]],welds:{}},
+  top:{draw:()=>R(262,96,10,12,'s-part','rx="2"')+LN(260,102,262,102,'s-dim'),parts:[[36,272,102]],welds:{}}
+};
+
 function ipbParts(v,r){
   return{
     1:['Gantry top beam',L(r.gauge+75),2],2:['Gantry mast',L(r.mastH),4],
@@ -91,7 +123,15 @@ function ipbParts(v,r){
     18:['Log dog','',2],19:['Log bunk',L(r.gauge-200),r.bunks],20:['Gantry side beam',L(v.gantryD),2],
     21:['Log stop','',4],22:['Head slide','',8],23:['Pulleys and drive belt','','1 set'],
     24:['Wheel shaft and pillow blocks','','2 + 4'],25:['Blade lube tank','',1],
-    26:['Head carriage rail',L(r.headW),2],27:['Corner brace','',4],28:['Push handle','',1]
+    26:['Head carriage rail',L(r.headW),2],27:['Corner brace','',4],28:['Push handle','',1],
+    29:['Debarker, 7″ carbide blade on ¾″ arbor and swing arm','',1],
+    30:[S.debarker==='belt'?'Debarker pulleys and belt (4:1 step-up)':'Debarker ¾ HP 12 V motor','',1],
+    31:['Feed gearmotor, 12 V, 60 rpm, with 15T #50 sprocket','',1],
+    32:['Feed chain, #50, fixed along the track',L(r.trackLen+610),1],
+    33:['Chain anchors with tensioning eye bolts','',2],
+    34:['Idler sprockets, #50, ball bearing','',2],
+    35:['Arduino control box: UNO R4 WiFi, MD30C driver, e-stop contactor, buttons','',1],
+    36:[`Belt-driven alternator, ${powerPlan(S.priceList||'typical').altA} A, one-wire`,'',1]
   };
 }
 
@@ -107,7 +147,11 @@ const IPB_WELDS={
   9:'Engine mount plate to carriage. Fillet all around',
   10:'Fixed wheel arm to carriage. Fillet all around plus gusset',
   11:'Blade guide arms to carriage. Tack, check alignment, then weld',
-  12:'Bunk risers to crossties, bunks to risers. Fillet all around'
+  12:'Bunk risers to crossties, bunks to risers. Fillet all around',
+  13:'Debarker arm pivot bracket to carriage. Fillet all around; the arm pivots on a bolt',
+  14:'Chain anchor brackets to both track ends. Fillet all around plus gusset',
+  15:'Feed gearmotor mount plate to gantry mast. Fillet all around',
+  16:'Alternator bracket to head carriage. Fillet all around; slotted for belt tension'
 };
 
 // Stack balloons in a margin column so they never overlap.
@@ -127,7 +171,11 @@ function renderIPB(v,r){
   const viewSel=document.getElementById('ipbViewSel'),showSel=document.getElementById('ipbShowSel');
   S.ipbView=S.ipbView||'front';S.ipbShow=S.ipbShow||'both';
   viewSel.value=S.ipbView;showSel.value=S.ipbShow;
-  const V=IPB_VIEWS[S.ipbView],H=V.h,show=S.ipbShow;
+  const B=IPB_VIEWS[S.ipbView];
+  const ext=[S.debarker!=='none'&&IPB_DEB[S.ipbView],S.feed==='chain'&&IPB_FEED[S.ipbView],
+    powerPlan(S.priceList||'typical').altA>0&&IPB_ALT[S.ipbView]].filter(Boolean);
+  const V=ext.reduce((a,x)=>({...a,draw:(d=>()=>d()+x.draw())(a.draw),parts:[...a.parts,...x.parts],welds:{...a.welds,...x.welds}}),B);
+  const H=V.h,show=S.ipbShow;
   if(Z.view!==S.ipbView){Z={s:1,cx:190,cy:H/2,H,view:S.ipbView}}
   ipbApplyZoom();
   svg.setAttribute('aria-label',V.name+' with numbered parts and weld points');
